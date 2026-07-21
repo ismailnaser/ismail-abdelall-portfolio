@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -o errexit
 
-# Create/update DB tables on every start (fixes missing tables on Render Postgres)
+# Collect CSS/JS into staticfiles/ so WhiteNoise can serve them
+python manage.py collectstatic --no-input
+
+# Create/update DB tables
 python manage.py migrate --noinput
 python manage.py ensure_superuser
 
