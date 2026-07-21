@@ -86,10 +86,15 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 if DATABASE_URL:
     import dj_database_url
 
+    # Render sometimes gives postgres:// — normalize for psycopg3
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
     DATABASES = {
         "default": dj_database_url.config(
             default=DATABASE_URL,
             conn_max_age=600,
+            conn_health_checks=True,
             ssl_require=True,
         )
     }
@@ -120,6 +125,7 @@ STORAGES = {
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+Path(MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -127,6 +133,33 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+# Show full errors in Render Logs when DEBUG=False
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
 
 JAZZMIN_SETTINGS = {
     "site_title": "لوحة التحكم",
