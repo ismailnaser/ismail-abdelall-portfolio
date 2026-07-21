@@ -1,4 +1,5 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.core.exceptions import ValidationError
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
@@ -16,6 +17,20 @@ from .models import (
 admin.site.site_header = "إدارة المعرض"
 admin.site.site_title = "لوحة التحكم"
 admin.site.index_title = "مرحباً — اختر قسماً للتعديل"
+
+
+def _save_with_cloudinary_guard(admin_obj, request, obj, form, change):
+    try:
+        super(type(admin_obj), admin_obj).save_model(request, obj, form, change)
+    except Exception as exc:
+        msg = str(exc)
+        if "api_key" in msg.lower() or "AuthorizationRequired" in type(exc).__name__:
+            raise ValidationError(
+                "فشل رفع الصورة إلى Cloudinary: مفتاح API غير صحيح. "
+                "راجع CLOUDINARY_API_KEY / CLOUDINARY_URL في Render "
+                "واستبدل أي قيمة مثل <your_api_key> بالمفتاح الحقيقي من لوحة Cloudinary."
+            ) from exc
+        raise
 
 
 class ProjectImageInline(admin.TabularInline):
@@ -109,6 +124,9 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def save_model(self, request, obj, form, change):
+        _save_with_cloudinary_guard(self, request, obj, form, change)
+
     def changelist_view(self, request, extra_context=None):
         from django.shortcuts import redirect
         from django.urls import reverse
@@ -159,6 +177,10 @@ class ProjectAdmin(admin.ModelAdmin):
     inlines = [ProjectImageInline]
     save_on_top = True
     ordering = ("order",)
+
+    def save_model(self, request, obj, form, change):
+        _save_with_cloudinary_guard(self, request, obj, form, change)
+
     fieldsets = (
         (
             "معلومات أساسية",

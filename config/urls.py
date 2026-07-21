@@ -8,6 +8,6 @@ urlpatterns = [
     path("", include("main.urls")),
 ]
 
-# Local media only when not using Cloudinary
-if settings.DEBUG and not getattr(settings, "USE_CLOUDINARY", False):
+# Serve local media when Cloudinary is not configured
+if not getattr(settings, "USE_CLOUDINARY", False):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

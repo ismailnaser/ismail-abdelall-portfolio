@@ -46,8 +46,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "cloudinary",
-    "cloudinary_storage",
     "main.apps.MainConfig",
 ]
 
@@ -124,42 +122,57 @@ Path(MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
 
 def _clean_env(name: str) -> str:
     value = (os.environ.get(name) or "").strip().strip('"').strip("'")
-    placeholders = {
-        "",
-        "your_api_key",
-        "<your_api_key>",
-        "api_key",
-        "changeme",
-        "xxx",
-        "YOUR_API_KEY",
-    }
-    if value.lower() in {p.lower() for p in placeholders} or value.startswith("<"):
+    bad_markers = ("your_api_key", "your_api_secret", "your_cloud_name", "<", "changeme", "xxx")
+    low = value.lower()
+    if not value or any(m in low for m in bad_markers):
         return ""
     return value
 
 
-# Use Cloudinary for uploaded images when real credentials exist (Render).
+# Use Cloudinary for uploaded images when REAL credentials exist (Render).
 _cloudinary_url = _clean_env("CLOUDINARY_URL")
 _cloud_name = _clean_env("CLOUDINARY_CLOUD_NAME")
 _api_key = _clean_env("CLOUDINARY_API_KEY")
 _api_secret = _clean_env("CLOUDINARY_API_SECRET")
+
+# If URL still contains placeholders, ignore it
+if _cloudinary_url and (
+    "your_api_key" in _cloudinary_url.lower()
+    or "<" in _cloudinary_url
+    or ":@" in _cloudinary_url
+):
+    _cloudinary_url = ""
 
 USE_CLOUDINARY = bool(_cloudinary_url or (_cloud_name and _api_key and _api_secret))
 
 if USE_CLOUDINARY:
     import cloudinary
 
+    INSTALLED_APPS = list(INSTALLED_APPS) + ["cloudinary", "cloudinary_storage"]
+
     if _cloudinary_url:
-        # Prefer explicit parse so placeholder URLs don't slip through
         os.environ["CLOUDINARY_URL"] = _cloudinary_url
-        cloudinary.config(cloudinary_url=_cloudinary_url, secure=True)
+        cloudinary.config(secure=True)
     else:
+        # Clear a bad CLOUDINARY_URL so the package doesn't prefer it
+        os.environ.pop("CLOUDINARY_URL", None)
+        os.environ["CLOUDINARY_CLOUD_NAME"] = _cloud_name
+        os.environ["CLOUDINARY_API_KEY"] = _api_key
+        os.environ["CLOUDINARY_API_SECRET"] = _api_secret
         cloudinary.config(
             cloud_name=_cloud_name,
             api_key=_api_key,
             api_secret=_api_secret,
             secure=True,
         )
+        # django-cloudinary-storage reads this dict
+        CLOUDINARY_STORAGE = {
+            "CLOUD_NAME": _cloud_name,
+            "API_KEY": _api_key,
+            "API_SECRET": _api_secret,
+            "SECURE": True,
+        }
+
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
     STORAGES = {
         "default": {
@@ -170,6 +183,17 @@ if USE_CLOUDINARY:
         },
     }
 else:
+    # Avoid package picking up placeholder CLOUDINARY_URL from the environment
+    for key in (
+        "CLOUDINARY_URL",
+        "CLOUDINARY_CLOUD_NAME",
+        "CLOUDINARY_API_KEY",
+        "CLOUDINARY_API_SECRET",
+    ):
+        val = (os.environ.get(key) or "").lower()
+        if "your_api" in val or "<" in val:
+            os.environ.pop(key, None)
+
     STORAGES = {
         "default": {
             "BACKEND": "django.core.files.storage.FileSystemStorage",
