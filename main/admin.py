@@ -13,15 +13,47 @@ from .models import (
     SiteSettings,
     Skill,
 )
+from .translation import fill_empty_en_from_ar
 
 admin.site.site_header = "إدارة المعرض"
 admin.site.site_title = "لوحة التحكم"
 admin.site.index_title = "مرحباً — اختر قسماً للتعديل"
 
+_AR_EN_HINT = (
+    "اكتب النص بالعربي؛ إذا تركت الحقل الإنجليزي فارغاً يُترجم تلقائياً عند الحفظ. "
+    "لو عبّيت الإنجليزي بنفسك ما رح ينكتب فوقه."
+)
+
+
+class AutoTranslateAdminMixin:
+    """Allow empty EN fields in forms; fill them from AR on save."""
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        Form = super().get_form(request, obj, change=change, **kwargs)
+
+        class AutoTranslateForm(Form):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                for name, field in self.fields.items():
+                    if name.endswith("_en"):
+                        field.required = False
+                        if "يُترجم من العربي" not in (field.help_text or ""):
+                            field.help_text = (
+                                (field.help_text + " — " if field.help_text else "")
+                                + "اختياري: يُترجم من العربي إن تُرك فارغاً"
+                            )
+
+        AutoTranslateForm.__name__ = getattr(Form, "__name__", "AutoTranslateForm")
+        return AutoTranslateForm
+
+    def save_model(self, request, obj, form, change):
+        _apply_ar_to_en(request, obj)
+        super().save_model(request, obj, form, change)
+
 
 def _save_with_cloudinary_guard(admin_obj, request, obj, form, change):
     try:
-        super(type(admin_obj), admin_obj).save_model(request, obj, form, change)
+        admin.ModelAdmin.save_model(admin_obj, request, obj, form, change)
     except Exception as exc:
         msg = str(exc)
         if "api_key" in msg.lower() or "AuthorizationRequired" in type(exc).__name__:
@@ -33,75 +65,89 @@ def _save_with_cloudinary_guard(admin_obj, request, obj, form, change):
         raise
 
 
+def _apply_ar_to_en(request, obj, *, notify=True) -> list[str]:
+    filled = fill_empty_en_from_ar(obj)
+    if notify and filled and request is not None:
+        messages.info(
+            request,
+            f"تُرجم تلقائياً إلى الإنجليزية: {', '.join(filled)}",
+        )
+    return filled
+
+
 class ProjectImageInline(admin.TabularInline):
     model = ProjectImage
     extra = 1
-    fields = ("image", "caption_en", "caption_ar", "order")
+    fields = ("image", "caption_ar", "caption_en", "order")
 
 
 @admin.register(SiteSettings)
-class SiteSettingsAdmin(admin.ModelAdmin):
+class SiteSettingsAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
     save_on_top = True
     fieldsets = (
         (
             "القسم التعريفي (أعلى الصفحة)",
             {
-                "description": "يظهر قبل الهيرو: الصورة، الاسم، والدراسة. بعد اختيار الصورة حرّك مربع الاقتصاص لتحديد الجزء الظاهر.",
+                "description": (
+                    "يظهر قبل الهيرو: الصورة، الاسم، والدراسة. "
+                    f"{_AR_EN_HINT} بعد اختيار الصورة حرّك مربع الاقتصاص لتحديد الجزء الظاهر."
+                ),
                 "fields": (
                     "photo",
-                    ("name_en", "name_ar"),
-                    ("tagline_en", "tagline_ar"),
-                    ("education_en", "education_ar"),
-                    "intro_bio_en",
+                    ("name_ar", "name_en"),
+                    ("tagline_ar", "tagline_en"),
+                    ("education_ar", "education_en"),
                     "intro_bio_ar",
+                    "intro_bio_en",
                 ),
             },
         ),
         (
             "قسم الهيرو (الصفحة الرئيسية)",
             {
-                "description": "العنوان الكبير والنص اللي تحتّه وأزرار الدعوة للتفاعل.",
+                "description": f"العنوان الكبير والنص اللي تحتّه وأزرار الدعوة للتفاعل. {_AR_EN_HINT}",
                 "fields": (
-                    "hero_title_en",
                     "hero_title_ar",
-                    "hero_subtitle_en",
+                    "hero_title_en",
                     "hero_subtitle_ar",
-                    ("hero_btn_projects_en", "hero_btn_projects_ar"),
-                    ("hero_btn_contact_en", "hero_btn_contact_ar"),
+                    "hero_subtitle_en",
+                    ("hero_btn_projects_ar", "hero_btn_projects_en"),
+                    ("hero_btn_contact_ar", "hero_btn_contact_en"),
                 ),
             },
         ),
         (
             "من أنا",
             {
-                "fields": ("about_en", "about_ar"),
+                "description": _AR_EN_HINT,
+                "fields": ("about_ar", "about_en"),
             },
         ),
         (
             "عناوين الأقسام",
             {
-                "description": "عدّل عناوين الأقسام الظاهرة في الموقع.",
+                "description": f"عدّل عناوين الأقسام الظاهرة في الموقع. {_AR_EN_HINT}",
                 "fields": (
-                    ("projects_title_en", "projects_title_ar"),
-                    ("about_title_en", "about_title_ar"),
-                    ("services_title_en", "services_title_ar"),
-                    "services_lead_en",
+                    ("projects_title_ar", "projects_title_en"),
+                    ("about_title_ar", "about_title_en"),
+                    ("services_title_ar", "services_title_en"),
                     "services_lead_ar",
-                    ("skills_title_en", "skills_title_ar"),
-                    ("contact_title_en", "contact_title_ar"),
+                    "services_lead_en",
+                    ("skills_title_ar", "skills_title_en"),
+                    ("contact_title_ar", "contact_title_en"),
                 ),
             },
         ),
         (
             "التواصل وروابط التواصل",
             {
-                "description": "الإيميل والواتساب وGitHub تظهر في قسم التواصل.",
+                "description": f"الإيميل والواتساب وGitHub تظهر في قسم التواصل. {_AR_EN_HINT}",
                 "fields": (
-                    "contact_intro_en",
                     "contact_intro_ar",
+                    "contact_intro_en",
                     ("email", "whatsapp"),
                     ("github_username", "github_url"),
-                    ("contact_success_en", "contact_success_ar"),
+                    ("contact_success_ar", "contact_success_en"),
                 ),
             },
         ),
@@ -109,10 +155,11 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             "نصوص صفحات المشاريع",
             {
                 "classes": ("collapse",),
+                "description": _AR_EN_HINT,
                 "fields": (
-                    ("details_btn_en", "details_btn_ar"),
-                    ("project_back_en", "project_back_ar"),
-                    ("project_gallery_title_en", "project_gallery_title_ar"),
+                    ("details_btn_ar", "details_btn_en"),
+                    ("project_back_ar", "project_back_en"),
+                    ("project_gallery_title_ar", "project_gallery_title_en"),
                 ),
             },
         ),
@@ -125,6 +172,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         return False
 
     def save_model(self, request, obj, form, change):
+        _apply_ar_to_en(request, obj)
         _save_with_cloudinary_guard(self, request, obj, form, change)
 
     def changelist_view(self, request, extra_context=None):
@@ -136,7 +184,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
 
 
 @admin.register(NavItem)
-class NavItemAdmin(admin.ModelAdmin):
+class NavItemAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
     list_display = ("label_ar", "label_en", "section_id", "order", "is_visible")
     list_editable = ("order", "is_visible")
     list_display_links = ("label_ar", "label_en")
@@ -148,9 +196,12 @@ class NavItemAdmin(admin.ModelAdmin):
         (
             None,
             {
-                "description": "روابط القائمة الجانبية. section_id لازم يطابق معرف القسم في الصفحة (مثل home أو projects).",
+                "description": (
+                    "روابط القائمة الجانبية. section_id لازم يطابق معرف القسم في الصفحة "
+                    f"(مثل home أو projects). {_AR_EN_HINT}"
+                ),
                 "fields": (
-                    ("label_en", "label_ar"),
+                    ("label_ar", "label_en"),
                     "section_id",
                     ("order", "is_visible"),
                 ),
@@ -160,7 +211,7 @@ class NavItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(Project)
-class ProjectAdmin(admin.ModelAdmin):
+class ProjectAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
     list_display = (
         "thumb",
         "title_ar",
@@ -178,16 +229,16 @@ class ProjectAdmin(admin.ModelAdmin):
     save_on_top = True
     ordering = ("order",)
 
-    def save_model(self, request, obj, form, change):
-        _save_with_cloudinary_guard(self, request, obj, form, change)
-
     fieldsets = (
         (
             "معلومات أساسية",
             {
-                "description": "العنوان والصورة الرئيسية وحالة النشر. بعد اختيار الصورة حدّد جزء الاقتصاص اللي يظهر في الموقع.",
+                "description": (
+                    "اكتب العنوان بالعربي واترك الإنجليزي فارغاً ليُترجم عند الحفظ "
+                    "(وإلا املأ الإنجليزي يدوياً). بعد اختيار الصورة حدّد جزء الاقتصاص."
+                ),
                 "fields": (
-                    ("title_en", "title_ar"),
+                    ("title_ar", "title_en"),
                     "slug",
                     "image",
                     ("order", "is_published"),
@@ -197,26 +248,39 @@ class ProjectAdmin(admin.ModelAdmin):
         (
             "بطاقة الصفحة الرئيسية",
             {
-                "description": "النص القصير والتقنيات اللي تظهر على كرت المشروع.",
+                "description": f"النص القصير والتقنيات اللي تظهر على كرت المشروع. {_AR_EN_HINT}",
                 "fields": (
-                    "summary_en",
                     "summary_ar",
-                    ("stack_en", "stack_ar"),
+                    "summary_en",
+                    ("stack_ar", "stack_en"),
                 ),
             },
         ),
         (
             "صفحة التفاصيل",
             {
-                "description": "الوصف الكامل وروابط المشروع. أضف صور المعرض من الأسفل.",
+                "description": f"الوصف الكامل وروابط المشروع. أضف صور المعرض من الأسفل. {_AR_EN_HINT}",
                 "fields": (
-                    "detail_en",
                     "detail_ar",
+                    "detail_en",
                     ("live_url", "github_url"),
                 ),
             },
         ),
     )
+
+    def save_model(self, request, obj, form, change):
+        _apply_ar_to_en(request, obj)
+        _save_with_cloudinary_guard(self, request, obj, form, change)
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for obj in formset.deleted_objects:
+            obj.delete()
+        for obj in instances:
+            _apply_ar_to_en(request, obj, notify=False)
+            obj.save()
+        formset.save_m2m()
 
     @admin.display(description="صورة")
     def thumb(self, obj):
@@ -234,7 +298,7 @@ class ProjectAdmin(admin.ModelAdmin):
 
 
 @admin.register(Service)
-class ServiceAdmin(admin.ModelAdmin):
+class ServiceAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
     list_display = ("title_ar", "title_en", "order", "is_visible")
     list_display_links = ("title_ar", "title_en")
     list_editable = ("order", "is_visible")
@@ -245,11 +309,11 @@ class ServiceAdmin(admin.ModelAdmin):
         (
             None,
             {
-                "description": "خدماتك المعروضة في قسم الخدمات.",
+                "description": f"خدماتك المعروضة في قسم الخدمات. {_AR_EN_HINT}",
                 "fields": (
-                    ("title_en", "title_ar"),
-                    "desc_en",
+                    ("title_ar", "title_en"),
                     "desc_ar",
+                    "desc_en",
                     ("order", "is_visible"),
                 ),
             },
@@ -267,7 +331,7 @@ class SkillAdmin(admin.ModelAdmin):
 
 
 @admin.register(AboutPoint)
-class AboutPointAdmin(admin.ModelAdmin):
+class AboutPointAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
     list_display = ("text_ar", "text_en", "order", "is_visible")
     list_display_links = ("text_ar", "text_en")
     list_editable = ("order", "is_visible")
@@ -277,10 +341,10 @@ class AboutPointAdmin(admin.ModelAdmin):
         (
             None,
             {
-                "description": "نقاط تظهر تحت فقرة «من أنا».",
+                "description": f"نقاط تظهر تحت فقرة «من أنا». {_AR_EN_HINT}",
                 "fields": (
-                    "text_en",
                     "text_ar",
+                    "text_en",
                     ("order", "is_visible"),
                 ),
             },
