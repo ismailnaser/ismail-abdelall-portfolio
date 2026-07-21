@@ -10,11 +10,27 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = os.environ.get("DEBUG", "True").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if h.strip()
-]
+
+def _parse_hosts(raw: str) -> list[str]:
+    hosts = []
+    for part in raw.split(","):
+        host = part.strip()
+        if not host:
+            continue
+        # Allow pasting full URLs by mistake
+        host = host.replace("https://", "").replace("http://", "")
+        host = host.split("/")[0].strip()
+        if host:
+            hosts.append(host)
+    return hosts
+
+
+ALLOWED_HOSTS = _parse_hosts(
+    os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,.onrender.com")
+)
+# Always allow Render subdomains as a safety net
+if ".onrender.com" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(".onrender.com")
 
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
