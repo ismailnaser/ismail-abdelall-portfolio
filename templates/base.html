@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ profile.name_en }} | Portfolio{% endblock %}</title>
+  <meta name="description" content="Personal portfolio — full-stack developer">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f4f7f6',
+              100: '#e7efed',
+              200: '#cddfd9',
+              300: '#a8c5bc',
+              400: '#7eada2',
+              500: '#5f8f84',
+              600: '#4d766d',
+              700: '#3f615a',
+              800: '#34504a',
+              900: '#2a423d',
+            },
+            accent: {
+              400: '#8aa4b4',
+              500: '#6f8fa3',
+              600: '#5a778a',
+            },
+          },
+          fontFamily: {
+            sans: ['"Manrope"', 'system-ui', 'sans-serif'],
+            display: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;600;700;800&family=Cairo:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'css/animations.css' %}">
+  <link rel="stylesheet" href="{% static 'css/weird-motion.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body id="top" class="bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased transition-colors duration-300 scroll-smooth">
+
+  <div id="menu-overlay" class="menu-overlay lg:hidden" aria-hidden="true"></div>
+
+  <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+    <div class="sidebar-inner">
+      <a href="{% url 'home' %}#top" class="sidebar-brand" id="sidebar-brand">
+        {% if profile.photo %}
+        <img src="{{ profile.photo.url }}" alt="" class="brand-photo" width="40" height="40">
+        {% else %}
+        <span class="brand-mark" aria-hidden="true"></span>
+        {% endif %}
+        <span class="brand-text" data-en="{{ profile.name_en }}" data-ar="{{ profile.name_ar }}">{{ profile.name_en }}</span>
+      </a>
+
+      <nav class="sidebar-nav">
+        {% for item in nav_items %}
+        <a href="{% url 'home' %}#{{ item.section_id }}" class="nav-link" data-section="{{ item.section_id }}">
+          <span data-en="{{ item.label_en }}" data-ar="{{ item.label_ar }}">{{ item.label_en }}</span>
+        </a>
+        {% endfor %}
+      </nav>
+
+      <div class="sidebar-actions">
+        <button type="button" id="theme-toggle" class="btn-ghost" aria-label="Toggle dark mode">
+          <span class="theme-icon-moon" aria-hidden="true">☽</span>
+          <span class="theme-icon-sun hidden" aria-hidden="true">☀</span>
+          <span class="theme-label" data-en-light="Dark Mode" data-ar-light="الوضع الداكن" data-en-dark="Light Mode" data-ar-dark="الوضع الفاتح">Dark Mode</span>
+        </button>
+        <button type="button" id="lang-toggle" class="btn-ghost" aria-label="Switch to Arabic">
+          <span class="lang-toggle-label">ع</span>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <header class="mobile-header lg:hidden">
+    <button type="button" id="menu-open" class="btn-icon" aria-label="Open menu" aria-expanded="false">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <span class="mobile-title font-display font-bold" data-en="{{ profile.name_en }}" data-ar="{{ profile.name_ar }}">{{ profile.name_en }}</span>
+    <div class="flex gap-2">
+      <button type="button" id="theme-toggle-mobile" class="btn-icon" aria-label="Switch to dark mode">☽</button>
+      <button type="button" id="lang-toggle-mobile" class="btn-icon lang-toggle-mobile-btn" aria-label="Switch to Arabic">ع</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <div id="photo-lightbox" class="photo-lightbox" hidden>
+    <div class="photo-lightbox-backdrop" data-lightbox-close></div>
+    <div class="photo-lightbox-panel" role="dialog" aria-modal="true" aria-label="Profile photo">
+      <button type="button" class="photo-lightbox-close" data-lightbox-close aria-label="Close">×</button>
+      <img class="photo-lightbox-img" alt="">
+    </div>
+  </div>
+
+  <script src="{% static 'js/main.js' %}"></script>
+  <script src="{% static 'js/weird-motion.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ project.title_en }} | {{ profile.name_en }}{% endblock %}
+
+{% block content %}
+<article class="project-detail">
+  <a href="{% url 'home' %}#projects" class="project-back link-btn" data-en="{{ profile.project_back_en }}" data-ar="{{ profile.project_back_ar }}">
+    ← {{ profile.project_back_en }}
+  </a>
+
+  <header class="project-detail-header">
+    {% if project.image %}
+    <div class="project-detail-cover">
+      <img src="{{ project.image.url }}" alt="{{ project.title_en }}" class="project-detail-hero-img">
+    </div>
+    {% endif %}
+    <h1 class="project-detail-title font-display" data-en="{{ project.title_en }}" data-ar="{{ project.title_ar }}">
+      {{ project.title_en }}
+    </h1>
+    <p class="project-stack project-detail-stack" data-en="{{ project.stack_en }}" data-ar="{{ project.stack_ar }}">
+      {{ project.stack_en }}
+    </p>
+    <div class="project-links project-detail-actions">
+      {% if project.live_url %}
+      <a href="{{ project.live_url }}" class="link-btn" target="_blank" rel="noopener noreferrer" data-en="Live" data-ar="مباشر">Live</a>
+      {% endif %}
+      {% if project.github_url %}
+      <a href="{{ project.github_url }}" class="link-btn" target="_blank" rel="noopener noreferrer">GitHub</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <section class="project-detail-body">
+    <div class="project-detail-text" data-en="{{ project.detail_en|default:project.summary_en }}" data-ar="{{ project.detail_ar|default:project.summary_ar }}">
+      {{ project.detail_en|default:project.summary_en|linebreaks }}
+    </div>
+  </section>
+
+  {% if gallery_images %}
+  <section class="project-gallery-section">
+    <h2 class="section-title font-display project-gallery-title" data-en="{{ profile.project_gallery_title_en }}" data-ar="{{ profile.project_gallery_title_ar }}">
+      {{ profile.project_gallery_title_en }}
+    </h2>
+    <div class="gallery-grid" id="project-gallery">
+      {% for img in gallery_images %}
+      <figure class="gallery-item">
+        <button type="button" class="gallery-thumb-btn" data-full="{{ img.image.url }}" data-caption-en="{{ img.caption_en }}" data-caption-ar="{{ img.caption_ar }}" aria-label="View image">
+          <img src="{{ img.image.url }}" alt="{{ img.caption_en }}" loading="lazy" class="gallery-thumb">
+        </button>
+        {% if img.caption_en or img.caption_ar %}
+        <figcaption class="gallery-caption" data-en="{{ img.caption_en }}" data-ar="{{ img.caption_ar }}">{{ img.caption_en }}</figcaption>
+        {% endif %}
+      </figure>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+
+<div id="lightbox" class="lightbox" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Image preview">
+  <button type="button" class="lightbox-close" aria-label="Close">&times;</button>
+  <button type="button" class="lightbox-prev" aria-label="Previous">‹</button>
+  <button type="button" class="lightbox-next" aria-label="Next">›</button>
+  <div class="lightbox-inner">
+    <img src="" alt="" class="lightbox-img" id="lightbox-img">
+    <p class="lightbox-caption" id="lightbox-caption"></p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/gallery.js' %}"></script>
+{% endblock %}

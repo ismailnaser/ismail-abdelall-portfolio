@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv/
+venv/
+env/
+
+# Django
+*.log
+db.sqlite3
+staticfiles/
+media/
+
+# Node (remove if you deleted Vite)
+node_modules/
+dist/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store

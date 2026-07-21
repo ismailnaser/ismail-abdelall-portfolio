@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="intro-profile" aria-label="Profile">
+  <div class="intro-profile-inner">
+    <div class="intro-photo-wrap">
+      {% if profile.photo %}
+      <button type="button" class="intro-photo-btn" aria-label="View profile photo" data-en-label="View profile photo" data-ar-label="عرض الصورة الشخصية" data-photo-src="{{ profile.photo.url }}" data-photo-alt="{{ profile.name_en }}">
+        <img src="{{ profile.photo.url }}" alt="{{ profile.name_en }}" class="intro-photo" width="120" height="120">
+      </button>
+      {% else %}
+      <div class="intro-photo-fallback" aria-hidden="true">
+        <span data-en="{{ profile.name_en|slice:':1' }}" data-ar="{{ profile.name_ar|slice:':1' }}">{{ profile.name_en|slice:":1" }}</span>
+      </div>
+      {% endif %}
+    </div>
+    <div class="intro-copy">
+      <p class="intro-label" data-en="About me" data-ar="تعريفي">About me</p>
+      <h2 class="intro-name font-display" data-en="{{ profile.name_en }}" data-ar="{{ profile.name_ar }}">{{ profile.name_en }}</h2>
+      <p class="intro-role" data-en="{{ profile.tagline_en }}" data-ar="{{ profile.tagline_ar }}">{{ profile.tagline_en }}</p>
+      {% if profile.intro_bio_en or profile.intro_bio_ar %}
+      <p class="intro-bio" data-en="{{ profile.intro_bio_en }}" data-ar="{{ profile.intro_bio_ar }}">{{ profile.intro_bio_en }}</p>
+      {% endif %}
+      <ul class="intro-meta">
+        {% if profile.education_en or profile.education_ar %}
+        <li>
+          <span class="intro-meta-label" data-en="Education" data-ar="الدراسة">Education</span>
+          <span data-en="{{ profile.education_en }}" data-ar="{{ profile.education_ar }}">{{ profile.education_en }}</span>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="home" class="section hero-section">
+  <p class="hero-eyebrow" data-en="{{ profile.tagline_en }}" data-ar="{{ profile.tagline_ar }}">{{ profile.tagline_en }}</p>
+  <h1 class="hero-title font-display" data-en="{{ profile.hero_title_en }}" data-ar="{{ profile.hero_title_ar }}">
+    {{ profile.hero_title_en }}
+  </h1>
+  <p class="hero-subtitle" data-en="{{ profile.hero_subtitle_en }}" data-ar="{{ profile.hero_subtitle_ar }}">
+    {{ profile.hero_subtitle_en }}
+  </p>
+  <div class="hero-actions">
+    <a href="#projects" class="btn-primary" data-en="{{ profile.hero_btn_projects_en }}" data-ar="{{ profile.hero_btn_projects_ar }}">{{ profile.hero_btn_projects_en }}</a>
+    <a href="#contact" class="btn-secondary" data-en="{{ profile.hero_btn_contact_en }}" data-ar="{{ profile.hero_btn_contact_ar }}">{{ profile.hero_btn_contact_en }}</a>
+  </div>
+</section>
+
+<section id="projects" class="section">
+  <h2 class="section-title font-display" data-en="{{ profile.projects_title_en }}" data-ar="{{ profile.projects_title_ar }}">{{ profile.projects_title_en }}</h2>
+  <div class="projects-grid">
+    {% for project in projects %}
+    <article class="project-card tilt-card">
+      <div class="project-card-visual">
+        {% if project.image %}
+        <img src="{{ project.image.url }}" alt="{{ project.title_en }}" class="project-image" loading="lazy">
+        {% else %}
+        <div class="project-placeholder" aria-hidden="true">
+          <span>{{ project.title_en|slice:":1" }}</span>
+        </div>
+        {% endif %}
+      </div>
+      <div class="project-card-body">
+        <h3 class="project-title">
+          <span data-en="{{ project.title_en }}" data-ar="{{ project.title_ar }}">{{ project.title_en }}</span>
+        </h3>
+        <p class="project-summary" data-en="{{ project.summary_en }}" data-ar="{{ project.summary_ar }}">
+          {{ project.summary_en }}
+        </p>
+        <p class="project-stack" data-en="{{ project.stack_en }}" data-ar="{{ project.stack_ar }}">
+          {{ project.stack_en }}
+        </p>
+        <div class="project-links">
+          {% if project.live_url %}
+          <a href="{{ project.live_url }}" class="link-btn" target="_blank" rel="noopener noreferrer" data-en="Live" data-ar="مباشر">Live</a>
+          {% endif %}
+          {% if project.github_url %}
+          <a href="{{ project.github_url }}" class="link-btn" target="_blank" rel="noopener noreferrer">GitHub</a>
+          {% endif %}
+          <a href="{% url 'project_detail' project.slug %}" class="link-btn link-muted" data-en="{{ profile.details_btn_en }}" data-ar="{{ profile.details_btn_ar }}">{{ profile.details_btn_en }}</a>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="about" class="section">
+  <h2 class="section-title font-display" data-en="{{ profile.about_title_en }}" data-ar="{{ profile.about_title_ar }}">{{ profile.about_title_en }}</h2>
+  <p class="section-lead" data-en="{{ profile.about_en }}" data-ar="{{ profile.about_ar }}">{{ profile.about_en }}</p>
+  <ul class="about-list">
+    {% for point in about_points %}
+    <li>
+      <span data-en="{{ point.en }}" data-ar="{{ point.ar }}">{{ point.en }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section id="services" class="section">
+  <h2 class="section-title font-display" data-en="{{ profile.services_title_en }}" data-ar="{{ profile.services_title_ar }}">{{ profile.services_title_en }}</h2>
+  <p class="section-lead" data-en="{{ profile.services_lead_en }}" data-ar="{{ profile.services_lead_ar }}">
+    {{ profile.services_lead_en }}
+  </p>
+  <div class="services-grid">
+    {% for service in services %}
+    <article class="service-card tilt-card">
+      <h3 data-en="{{ service.title_en }}" data-ar="{{ service.title_ar }}">{{ service.title_en }}</h3>
+      <p data-en="{{ service.desc_en }}" data-ar="{{ service.desc_ar }}">{{ service.desc_en }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="skills" class="section">
+  <h2 class="section-title font-display" data-en="{{ profile.skills_title_en }}" data-ar="{{ profile.skills_title_ar }}">{{ profile.skills_title_en }}</h2>
+  <div class="skills-wrap">
+    {% for skill in skills %}
+    <span class="skill-tag">{{ skill.name }}</span>
+    {% endfor %}
+  </div>
+</section>
+
+<section id="contact" class="section section-contact">
+  <h2 class="section-title font-display" data-en="{{ profile.contact_title_en }}" data-ar="{{ profile.contact_title_ar }}">{{ profile.contact_title_en }}</h2>
+  <p class="section-lead" data-en="{{ profile.contact_intro_en }}" data-ar="{{ profile.contact_intro_ar }}">
+    {{ profile.contact_intro_en }}
+  </p>
+
+  <div class="contact-channels">
+    <a href="mailto:{{ profile.email }}" class="channel-card tilt-card">
+      <span class="channel-label" data-en="Email" data-ar="البريد">Email</span>
+      <span class="channel-value">{{ profile.email }}</span>
+      <span class="channel-cta" data-en="Contact Now" data-ar="تواصل الآن">Contact Now</span>
+    </a>
+    <a href="https://wa.me/{{ profile.whatsapp }}" class="channel-card tilt-card" target="_blank" rel="noopener noreferrer">
+      <span class="channel-label">WhatsApp</span>
+      <span class="channel-value">+{{ profile.whatsapp }}</span>
+      <span class="channel-cta" data-en="Contact Now" data-ar="تواصل الآن">Contact Now</span>
+    </a>
+    <a href="{{ profile.github_url }}" class="channel-card tilt-card" target="_blank" rel="noopener noreferrer">
+      <span class="channel-label">GitHub</span>
+      <span class="channel-value">{{ profile.github_username }}</span>
+      <span class="channel-cta" data-en="Contact Now" data-ar="تواصل الآن">Contact Now</span>
+    </a>
+  </div>
+
+  {% if contact_sent %}
+  <p class="form-success" role="status" data-en="{{ profile.contact_success_en }}" data-ar="{{ profile.contact_success_ar }}">
+    {{ profile.contact_success_en }}
+  </p>
+  {% endif %}
+
+  <form method="post" class="contact-form" novalidate>
+    {% csrf_token %}
+    <div class="form-row">
+      <label for="id_name" class="sr-only" data-en="Name" data-ar="الاسم">Name</label>
+      {{ form.name }}
+      {% if form.name.errors %}<span class="form-error">{{ form.name.errors.0 }}</span>{% endif %}
+    </div>
+    <div class="form-row">
+      <label for="id_email" class="sr-only" data-en="Email" data-ar="البريد">Email</label>
+      {{ form.email }}
+      {% if form.email.errors %}<span class="form-error">{{ form.email.errors.0 }}</span>{% endif %}
+    </div>
+    <div class="form-row">
+      <label for="id_message" class="sr-only" data-en="Message" data-ar="الرسالة">Message</label>
+      {{ form.message }}
+      {% if form.message.errors %}<span class="form-error">{{ form.message.errors.0 }}</span>{% endif %}
+    </div>
+    <button type="submit" class="btn-primary w-full sm:w-auto" data-en="Send Message" data-ar="إرسال الرسالة">Send Message</button>
+  </form>
+</section>
+{% endblock %}
