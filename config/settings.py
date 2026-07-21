@@ -121,27 +121,43 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 Path(MEDIA_ROOT).mkdir(parents=True, exist_ok=True)
 
-# Use Cloudinary for uploaded images when credentials exist (Render production).
-# Locally without these env vars, files stay on disk as usual.
-USE_CLOUDINARY = bool(
-    os.environ.get("CLOUDINARY_URL")
-    or (
-        os.environ.get("CLOUDINARY_CLOUD_NAME")
-        and os.environ.get("CLOUDINARY_API_KEY")
-        and os.environ.get("CLOUDINARY_API_SECRET")
-    )
-)
+
+def _clean_env(name: str) -> str:
+    value = (os.environ.get(name) or "").strip().strip('"').strip("'")
+    placeholders = {
+        "",
+        "your_api_key",
+        "<your_api_key>",
+        "api_key",
+        "changeme",
+        "xxx",
+        "YOUR_API_KEY",
+    }
+    if value.lower() in {p.lower() for p in placeholders} or value.startswith("<"):
+        return ""
+    return value
+
+
+# Use Cloudinary for uploaded images when real credentials exist (Render).
+_cloudinary_url = _clean_env("CLOUDINARY_URL")
+_cloud_name = _clean_env("CLOUDINARY_CLOUD_NAME")
+_api_key = _clean_env("CLOUDINARY_API_KEY")
+_api_secret = _clean_env("CLOUDINARY_API_SECRET")
+
+USE_CLOUDINARY = bool(_cloudinary_url or (_cloud_name and _api_key and _api_secret))
 
 if USE_CLOUDINARY:
     import cloudinary
 
-    if os.environ.get("CLOUDINARY_URL"):
-        cloudinary.config(secure=True)
+    if _cloudinary_url:
+        # Prefer explicit parse so placeholder URLs don't slip through
+        os.environ["CLOUDINARY_URL"] = _cloudinary_url
+        cloudinary.config(cloudinary_url=_cloudinary_url, secure=True)
     else:
         cloudinary.config(
-            cloud_name=os.environ["CLOUDINARY_CLOUD_NAME"],
-            api_key=os.environ["CLOUDINARY_API_KEY"],
-            api_secret=os.environ["CLOUDINARY_API_SECRET"],
+            cloud_name=_cloud_name,
+            api_key=_api_key,
+            api_secret=_api_secret,
             secure=True,
         )
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
