@@ -8,5 +8,6 @@ urlpatterns = [
     path("", include("main.urls")),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve uploaded media (profile/project images). On Render free disk is ephemeral —
+# for permanent storage later use S3/Cloudinary.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
