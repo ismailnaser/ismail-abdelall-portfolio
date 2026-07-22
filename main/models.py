@@ -16,6 +16,7 @@ class SiteSettings(models.Model):
         upload_to="profile/",
         blank=True,
         null=True,
+        max_length=500,
         verbose_name="الصورة الشخصية",
         help_text="صورة مصغرة تظهر في القسم التعريفي أعلى الصفحة",
     )
@@ -152,7 +153,7 @@ class NavItem(models.Model):
 
 
 class Project(models.Model):
-    slug = models.SlugField(max_length=80, unique=True, blank=True)
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
     title_en = models.CharField(max_length=200)
     title_ar = models.CharField(max_length=200)
     summary_en = models.TextField(help_text="نص قصير يظهر على كرت المشروع في الصفحة الرئيسية")
@@ -165,9 +166,9 @@ class Project(models.Model):
     detail_ar = models.TextField(blank=True, default="")
     stack_en = models.CharField(max_length=300)
     stack_ar = models.CharField(max_length=300)
-    live_url = models.URLField(blank=True)
-    github_url = models.URLField(blank=True)
-    image = models.ImageField(upload_to="projects/", blank=True, null=True)
+    live_url = models.URLField(blank=True, max_length=500)
+    github_url = models.URLField(blank=True, max_length=500)
+    image = models.ImageField(upload_to="projects/", blank=True, null=True, max_length=500)
     order = models.PositiveIntegerField(default=0)
     is_published = models.BooleanField(default=True)
 
@@ -181,7 +182,16 @@ class Project(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title_en) or "project"
+            base = (slugify(self.title_en) or "project")[:110]
+            candidate = base
+            n = 2
+            while Project.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+                suffix = f"-{n}"
+                candidate = f"{base[: 120 - len(suffix)]}{suffix}"
+                n += 1
+            self.slug = candidate
+        else:
+            self.slug = self.slug[:120]
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -194,7 +204,7 @@ class ProjectImage(models.Model):
         on_delete=models.CASCADE,
         related_name="gallery_images",
     )
-    image = models.ImageField(upload_to="projects/gallery/")
+    image = models.ImageField(upload_to="projects/gallery/", max_length=500)
     caption_en = models.CharField(max_length=200, blank=True, default="")
     caption_ar = models.CharField(max_length=200, blank=True, default="")
     order = models.PositiveIntegerField(default=0)
