@@ -51,6 +51,14 @@ class AutoTranslateAdminMixin:
         super().save_model(request, obj, form, change)
 
 
+class AdminImageMediaMixin:
+    """Optional crop UI on default Django admin."""
+
+    class Media:
+        css = {"all": ("css/admin-image.css",)}
+        js = ("js/admin-image-preview.js",)
+
+
 def _save_with_cloudinary_guard(admin_obj, request, obj, form, change):
     try:
         admin.ModelAdmin.save_model(admin_obj, request, obj, form, change)
@@ -82,7 +90,7 @@ class ProjectImageInline(admin.TabularInline):
 
 
 @admin.register(SiteSettings)
-class SiteSettingsAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
+class SiteSettingsAdmin(AdminImageMediaMixin, AutoTranslateAdminMixin, admin.ModelAdmin):
     save_on_top = True
     fieldsets = (
         (
@@ -211,7 +219,7 @@ class NavItemAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
 
 
 @admin.register(Project)
-class ProjectAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
+class ProjectAdmin(AdminImageMediaMixin, AutoTranslateAdminMixin, admin.ModelAdmin):
     list_display = (
         "thumb",
         "title_ar",
@@ -382,9 +390,7 @@ class ContactMessageAdmin(admin.ModelAdmin):
 
     @admin.display(description="")
     def status_icon(self, obj):
-        if obj.is_read:
-            return mark_safe('<i class="fas fa-envelope-open" title="مقروءة"></i>')
-        return mark_safe('<i class="fas fa-envelope" title="جديدة"></i>')
+        return "مقروءة" if obj.is_read else "جديدة"
 
     @admin.display(description="الرسالة")
     def short_message(self, obj):
