@@ -57,6 +57,15 @@
         viewMode: 1,
       };
     }
+    if (kind === "gallery") {
+      return {
+        aspectRatio: 4 / 3,
+        label: "معاينة صورة المعرض",
+        width: 1200,
+        height: 900,
+        viewMode: 1,
+      };
+    }
     return {
       aspectRatio: 4 / 3,
       label: "معاينة صورة المشروع",
@@ -72,7 +81,7 @@
       input.parentElement;
     if (!row) return null;
 
-    const currentLink = row.querySelector('a[href*="/media/"]');
+    const currentLink = row.querySelector('a[href*="/media/"], a[href*="cloudinary"]');
     if (currentLink) return currentLink.href;
 
     const img = row.querySelector("img.admin-thumb, img.admin-thumb-lg, .file-upload img");
@@ -187,6 +196,8 @@
       destroyCropper();
       empty.hidden = true;
       stageImg.hidden = false;
+      stageImg.removeAttribute("hidden");
+      stageImg.style.display = "block";
       stageImg.src = src;
       resultImg.hidden = true;
       resultImg.removeAttribute("src");
@@ -197,9 +208,12 @@
       destroyCropper();
       empty.hidden = true;
       stageImg.hidden = false;
+      stageImg.removeAttribute("hidden");
+      stageImg.style.display = "block";
       stageImg.src = src;
 
       const onReady = () => {
+        if (cropper) return;
         cropper = new window.Cropper(stageImg, {
           aspectRatio: cfg.aspectRatio,
           viewMode: cfg.viewMode,
@@ -244,19 +258,13 @@
       dirty = false;
       clearBtn.hidden = !local;
       cropEnabled = false;
-
-      if (local) {
-        // New upload: plain preview by default — original file is kept
-        showPlainPreview(src);
-      } else {
-        showPlainPreview(src);
-      }
+      showPlainPreview(src);
     }
 
     function enableCrop() {
       if (!currentSrc) return;
       cropEnabled = true;
-      dirty = isLocalFile; // only rewrite file on save if this is a new upload
+      dirty = isLocalFile;
       setCropControlsVisible(true);
       startCropper(currentSrc);
     }
@@ -282,6 +290,7 @@
       cropEnabled = false;
       stageImg.removeAttribute("src");
       stageImg.hidden = true;
+      stageImg.style.display = "";
       resultImg.removeAttribute("src");
       resultImg.hidden = true;
       empty.hidden = false;
@@ -377,7 +386,6 @@
 
     panel._cropApi = {
       needsCommit() {
-        // Only replace the uploaded file when crop is explicitly enabled
         return !!(cropper && cropEnabled && dirty && isLocalFile);
       },
       commit() {
@@ -426,16 +434,47 @@
     return panel;
   }
 
+  function stripStalePanel(input) {
+    const next = input.nextElementSibling;
+    if (next && next.classList.contains("admin-crop-panel") && !next._cropApi) {
+      next.remove();
+      delete input.dataset.previewBound;
+      return true;
+    }
+    return false;
+  }
+
   function bindFileInput(input) {
-    if (!input || input.dataset.previewBound) return;
-    if (input.disabled) return;
+    if (!input || input.disabled) return;
+    // Never bind Django's empty formset template — clones would break preview
+    if (input.closest(".empty-form")) return;
+
+    if (input.dataset.previewBound === "1") {
+      // Cloned row may copy the attribute + dead panel HTML without listeners
+      if (!stripStalePanel(input)) return;
+    }
 
     input.dataset.previewBound = "1";
     input.setAttribute("accept", "image/*");
     hideDjangoCurrentPreview(input);
 
+    // Remove any leftover panel before attaching a live one
+    const next = input.nextElementSibling;
+    if (next && next.classList.contains("admin-crop-panel")) next.remove();
+
     const panel = createCropPanel(input);
     input.insertAdjacentElement("afterend", panel);
+  }
+
+  function isImageFileInput(input) {
+    const name = (input.name || "").toLowerCase();
+    const accept = (input.getAttribute("accept") || "").toLowerCase();
+    return (
+      name.includes("image") ||
+      name.includes("photo") ||
+      !accept ||
+      accept.includes("image")
+    );
   }
 
   function scan(root) {
@@ -447,26 +486,59 @@
       });
 
     scope.querySelectorAll('input[type="file"]').forEach((input) => {
-      const name = (input.name || "").toLowerCase();
-      const accept = (input.getAttribute("accept") || "").toLowerCase();
-      const looksLikeImage =
-        name.includes("image") ||
-        name.includes("photo") ||
-        !accept ||
-        accept.includes("image");
-      if (looksLikeImage) bindFileInput(input);
+      if (isImageFileInput(input)) bindFileInput(input);
     });
+  }
+
+  function onFormsetAdded(row) {
+    if (!row || !(row instanceof Element)) return;
+    // Fresh bind for newly added inline rows
+    row.querySelectorAll('input[type="file"]').forEach((input) => {
+      delete input.dataset.previewBound;
+      const panel = input.nextElementSibling;
+      if (panel && panel.classList.contains("admin-crop-panel")) panel.remove();
+    });
+    scan(row);
   }
 
   function init() {
     ensureAssets()
       .then(() => {
         scan(document);
-        document.addEventListener("formset:added", (e) => scan(e.target));
+
+        // Django 4.1+ native CustomEvent on the new row
+        document.addEventListener("formset:added", (e) => {
+          onFormsetAdded(e.target);
+        });
+
+        // jQuery fallback (older admin inlines)
+        if (window.django && window.django.jQuery) {
+          window.django.jQuery(document).on("formset:added", function (_e, $row) {
+            const row = $row && $row.get ? $row.get(0) : $row;
+            onFormsetAdded(row);
+          });
+        }
+
+        // Click fallback for "Add another"
         document.addEventListener("click", (e) => {
-          if (e.target.closest(".add-row a, a.add-row")) {
-            setTimeout(() => scan(document), 80);
-          }
+          if (!e.target.closest(".add-row a, a.add-row, .inline-group .add-row")) return;
+          setTimeout(() => {
+            document
+              .querySelectorAll(".inline-related:not(.empty-form) input[type='file']")
+              .forEach((input) => {
+                if (!isImageFileInput(input)) return;
+                const panel = input.nextElementSibling;
+                const deadPanel =
+                  panel &&
+                  panel.classList.contains("admin-crop-panel") &&
+                  !panel._cropApi;
+                if (!input.dataset.previewBound || deadPanel) {
+                  delete input.dataset.previewBound;
+                  if (deadPanel) panel.remove();
+                  bindFileInput(input);
+                }
+              });
+          }, 100);
         });
       })
       .catch((err) => {

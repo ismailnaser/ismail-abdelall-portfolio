@@ -834,12 +834,29 @@ html.dark .project-placeholder {
   color: #a8c5bc;
 }
 
+.project-card-visual {
+  aspect-ratio: 4/3;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #eef4f2, #f2f5f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+html.dark .project-card-visual {
+  background: linear-gradient(135deg, #1a2e2a, #1e2a32);
+}
+
 .project-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: 10px;
-  aspect-ratio: 4/3;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  padding: 0.5rem;
+  box-sizing: border-box;
 }
 
 .project-title {
@@ -1436,31 +1453,49 @@ html.dark .gallery-caption {
   color: #a8a29e;
 }
 
-/* Lightbox */
+/* Lightbox — must sit above sidebar (z-index 60) and main */
 .lightbox {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 3000;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(12, 10, 9, 0.92);
-  padding: 1rem;
+  background: rgba(12, 10, 9, 0.94);
+  padding: 4.5rem 1rem 1.5rem;
+  box-sizing: border-box;
 }
 
 .lightbox[hidden] {
   display: none !important;
 }
 
+.lightbox-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent);
+  pointer-events: none;
+}
+
 .lightbox-inner {
+  position: relative;
+  z-index: 1;
   max-width: min(960px, 100%);
-  max-height: 90vh;
+  max-height: calc(100vh - 6rem);
   text-align: center;
 }
 
 .lightbox-img {
   max-width: 100%;
-  max-height: 75vh;
+  max-height: 70vh;
   object-fit: contain;
   border-radius: 8px;
 }
@@ -1474,48 +1509,72 @@ html.dark .gallery-caption {
 .lightbox-close,
 .lightbox-prev,
 .lightbox-next {
-  position: absolute;
   border: none;
-  background: rgba(255, 255, 255, 0.12);
   color: #fff;
   cursor: pointer;
-  border-radius: 8px;
-  font-size: 1.75rem;
-  line-height: 1;
-  width: 44px;
-  height: 44px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
-}
-
-.lightbox-close:hover,
-.lightbox-prev:hover,
-.lightbox-next:hover {
-  background: rgba(255, 255, 255, 0.22);
+  transition: background 0.2s, transform 0.2s;
+  pointer-events: auto;
 }
 
 .lightbox-close {
-  top: 1rem;
-  right: 1rem;
+  gap: 0.4rem;
+  min-height: 48px;
+  padding: 0.55rem 1.15rem;
+  border-radius: 999px;
+  background: #4d766d;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: 1rem;
+  font-weight: 700;
 }
 
-html[dir="rtl"] .lightbox-close {
-  right: auto;
-  left: 1rem;
+.lightbox-close:hover {
+  background: #3f615a;
+  transform: scale(1.04);
+}
+
+.lightbox-close-x {
+  font-size: 1.55rem;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.lightbox-close-text {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.lightbox-prev,
+.lightbox-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.lightbox-prev:hover,
+.lightbox-next:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .lightbox-prev {
   left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .lightbox-next {
   right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
+}
+
+html[dir="rtl"] .lightbox-toolbar {
+  justify-content: flex-start;
 }
 
 html[dir="rtl"] .lightbox-prev {
@@ -1526,4 +1585,8 @@ html[dir="rtl"] .lightbox-prev {
 html[dir="rtl"] .lightbox-next {
   right: auto;
   left: 1rem;
+}
+
+body.lightbox-open {
+  overflow: hidden;
 }

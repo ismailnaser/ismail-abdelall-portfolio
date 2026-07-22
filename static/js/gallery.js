@@ -2,6 +2,11 @@
   const lightbox = document.getElementById("lightbox");
   if (!lightbox) return;
 
+  // Keep lightbox above sidebar / main stacking contexts
+  if (lightbox.parentElement !== document.body) {
+    document.body.appendChild(lightbox);
+  }
+
   const imgEl = document.getElementById("lightbox-img");
   const captionEl = document.getElementById("lightbox-caption");
   const buttons = Array.from(document.querySelectorAll(".gallery-thumb-btn"));
@@ -28,12 +33,15 @@
     showAt(index);
     lightbox.hidden = false;
     lightbox.setAttribute("aria-hidden", "false");
+    document.body.classList.add("lightbox-open");
     document.body.style.overflow = "hidden";
+    lightbox.querySelector(".lightbox-close")?.focus();
   }
 
   function closeLightbox() {
     lightbox.hidden = true;
     lightbox.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("lightbox-open");
     document.body.style.overflow = "";
     imgEl.src = "";
   }
@@ -42,9 +50,21 @@
     btn.addEventListener("click", () => openLightbox(i));
   });
 
-  lightbox.querySelector(".lightbox-close")?.addEventListener("click", closeLightbox);
-  lightbox.querySelector(".lightbox-prev")?.addEventListener("click", () => showAt(currentIndex - 1));
-  lightbox.querySelector(".lightbox-next")?.addEventListener("click", () => showAt(currentIndex + 1));
+  lightbox.querySelectorAll(".lightbox-close").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeLightbox();
+    });
+  });
+
+  lightbox.querySelector(".lightbox-prev")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showAt(currentIndex - 1);
+  });
+  lightbox.querySelector(".lightbox-next")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showAt(currentIndex + 1);
+  });
 
   lightbox.addEventListener("click", (e) => {
     if (e.target === lightbox) closeLightbox();
