@@ -1,12 +1,12 @@
 /**
- * Single image preview + cropper for Django admin.
- * User chooses the visible crop area; cropped file is what gets saved.
+ * Admin image preview with optional crop.
+ * Default: keep the original image. Crop only when the user enables it.
  */
 (function () {
   const CROPPER_JS = "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js";
   const CROPPER_CSS = "https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css";
 
-  const EMPTY_HINT = "اختر صورة، بعدين حرّك مربع الاقتصاص لتحديد الجزء الظاهر في الموقع";
+  const EMPTY_HINT = "اختر صورة — الافتراضي حفظها كاملة بدون اقتصاص";
 
   function loadAsset(href, type) {
     return new Promise((resolve, reject) => {
@@ -51,7 +51,7 @@
     if (kind === "photo") {
       return {
         aspectRatio: 1,
-        label: "اقتصاص دائري للصورة الشخصية (١:١)",
+        label: "معاينة الصورة الشخصية",
         width: 800,
         height: 800,
         viewMode: 1,
@@ -59,7 +59,7 @@
     }
     return {
       aspectRatio: 4 / 3,
-      label: "اقتصاص صورة المشروع (٤:٣)",
+      label: "معاينة صورة المشروع",
       width: 1200,
       height: 900,
       viewMode: 1,
@@ -85,12 +85,6 @@
     const row =
       input.closest(".form-group, .form-row, .fieldBox, td") || input.parentElement;
     if (!row) return;
-    row.querySelectorAll("a[href*='/media/']").forEach((a) => {
-      if (a.querySelector("img")) return;
-      const p = a.closest("p");
-      if (p && p.classList.contains("file-upload")) return;
-      // Keep the clear checkbox / "Currently" text but hide large duplicate previews
-    });
     row.querySelectorAll(".admin-thumb, .admin-thumb-lg").forEach((el) => {
       if (!el.closest(".admin-crop-panel")) el.style.display = "none";
     });
@@ -102,37 +96,48 @@
     const panel = document.createElement("div");
     panel.className = "admin-crop-panel";
     panel.dataset.kind = kind;
+    panel.dataset.cropEnabled = "0";
     panel.innerHTML = `
       <p class="admin-crop-panel__label">${cfg.label}</p>
       <div class="admin-crop-panel__stage">
-        <img class="admin-crop-panel__img" alt="معاينة الاقتصاص" hidden />
+        <img class="admin-crop-panel__img" alt="معاينة الصورة" hidden />
         <div class="admin-crop-panel__empty">${EMPTY_HINT}</div>
       </div>
-      <div class="admin-crop-panel__result">
-        <span class="admin-crop-panel__result-label">شكل الظهور في الموقع</span>
+      <div class="admin-crop-panel__result" hidden>
+        <span class="admin-crop-panel__result-label">شكل الظهور بعد الاقتصاص</span>
         <div class="admin-crop-panel__result-frame admin-crop-panel__result-frame--${kind}">
           <img class="admin-crop-panel__result-img" alt="نتيجة الاقتصاص" hidden />
         </div>
       </div>
       <div class="admin-crop-panel__actions">
-        <button type="button" class="admin-img-btn admin-img-btn--small" data-action="zoom-in">تكبير</button>
-        <button type="button" class="admin-img-btn admin-img-btn--small" data-action="zoom-out">تصغير</button>
-        <button type="button" class="admin-img-btn admin-img-btn--small admin-img-btn--ghost" data-action="reset">إعادة ضبط</button>
+        <button type="button" class="admin-img-btn admin-img-btn--small admin-img-btn--ghost" data-action="toggle-crop">تفعيل الاقتصاص</button>
+        <button type="button" class="admin-img-btn admin-img-btn--small" data-action="zoom-in" hidden>تكبير</button>
+        <button type="button" class="admin-img-btn admin-img-btn--small" data-action="zoom-out" hidden>تصغير</button>
+        <button type="button" class="admin-img-btn admin-img-btn--small admin-img-btn--ghost" data-action="reset" hidden>إعادة ضبط</button>
         <button type="button" class="admin-img-btn admin-img-btn--small admin-img-btn--ghost" data-action="clear" hidden>إلغاء الصورة الجديدة</button>
       </div>
-      <p class="admin-crop-panel__hint">اسحب مربع الاقتصاص أو حرّك الصورة لتحديد الجزء اللي بدك إياه. عند الحفظ بتنحفظ الصورة بعد الاقتصاص.</p>
+      <p class="admin-crop-panel__hint">الصورة بتنحفظ كاملة. إذا حابب تقتص جزء معيّن، اضغط «تفعيل الاقتصاص».</p>
     `;
 
     const stageImg = panel.querySelector(".admin-crop-panel__img");
     const empty = panel.querySelector(".admin-crop-panel__empty");
+    const resultWrap = panel.querySelector(".admin-crop-panel__result");
     const resultImg = panel.querySelector(".admin-crop-panel__result-img");
     const clearBtn = panel.querySelector('[data-action="clear"]');
+    const toggleBtn = panel.querySelector('[data-action="toggle-crop"]');
+    const zoomInBtn = panel.querySelector('[data-action="zoom-in"]');
+    const zoomOutBtn = panel.querySelector('[data-action="zoom-out"]');
+    const resetBtn = panel.querySelector('[data-action="reset"]');
+    const hint = panel.querySelector(".admin-crop-panel__hint");
 
     let cropper = null;
     let objectUrl = null;
     let dirty = false;
     let ready = false;
+    let cropEnabled = false;
     let previewTimer = null;
+    let currentSrc = null;
+    let isLocalFile = false;
 
     function destroyCropper() {
       if (cropper) {
@@ -143,7 +148,7 @@
     }
 
     function updateResultPreview() {
-      if (!cropper) return;
+      if (!cropper || !cropEnabled) return;
       const canvas = cropper.getCroppedCanvas({
         width: Math.min(cfg.width, 360),
         height: Math.min(cfg.height, 360),
@@ -161,20 +166,35 @@
     }
 
     function markDirty() {
-      if (!ready) return;
+      if (!ready || !cropEnabled) return;
       dirty = true;
     }
 
-    function startCropper(src, isLocal) {
-      destroyCropper();
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-        objectUrl = null;
-      }
-      if (isLocal) objectUrl = src;
+    function setCropControlsVisible(on) {
+      zoomInBtn.hidden = !on;
+      zoomOutBtn.hidden = !on;
+      resetBtn.hidden = !on;
+      resultWrap.hidden = !on;
+      panel.dataset.cropEnabled = on ? "1" : "0";
+      toggleBtn.textContent = on ? "إلغاء الاقتصاص" : "تفعيل الاقتصاص";
+      toggleBtn.classList.toggle("admin-img-btn--active", on);
+      hint.textContent = on
+        ? "اسحب مربع الاقتصاص أو حرّك الصورة. عند الحفظ بتنحفظ النسخة المقصوصة فقط إذا الاقتصاص مفعّل."
+        : "الصورة بتنحفظ كاملة. إذا حابب تقتص جزء معيّن، اضغط «تفعيل الاقتصاص».";
+    }
 
-      dirty = !!isLocal;
-      clearBtn.hidden = !isLocal;
+    function showPlainPreview(src) {
+      destroyCropper();
+      empty.hidden = true;
+      stageImg.hidden = false;
+      stageImg.src = src;
+      resultImg.hidden = true;
+      resultImg.removeAttribute("src");
+      setCropControlsVisible(false);
+    }
+
+    function startCropper(src) {
+      destroyCropper();
       empty.hidden = true;
       stageImg.hidden = false;
       stageImg.src = src;
@@ -184,7 +204,7 @@
           aspectRatio: cfg.aspectRatio,
           viewMode: cfg.viewMode,
           dragMode: "move",
-          autoCropArea: 0.85,
+          autoCropArea: 0.92,
           responsive: true,
           background: false,
           guides: true,
@@ -213,38 +233,88 @@
       else stageImg.onload = onReady;
     }
 
+    function setImage(src, local) {
+      if (objectUrl && objectUrl !== src) {
+        URL.revokeObjectURL(objectUrl);
+        objectUrl = null;
+      }
+      if (local) objectUrl = src;
+      currentSrc = src;
+      isLocalFile = !!local;
+      dirty = false;
+      clearBtn.hidden = !local;
+      cropEnabled = false;
+
+      if (local) {
+        // New upload: plain preview by default — original file is kept
+        showPlainPreview(src);
+      } else {
+        showPlainPreview(src);
+      }
+    }
+
+    function enableCrop() {
+      if (!currentSrc) return;
+      cropEnabled = true;
+      dirty = isLocalFile; // only rewrite file on save if this is a new upload
+      setCropControlsVisible(true);
+      startCropper(currentSrc);
+    }
+
+    function disableCrop() {
+      cropEnabled = false;
+      dirty = false;
+      if (!currentSrc) {
+        setCropControlsVisible(false);
+        return;
+      }
+      showPlainPreview(currentSrc);
+    }
+
     function resetPanel() {
       destroyCropper();
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
         objectUrl = null;
       }
+      currentSrc = null;
+      isLocalFile = false;
+      cropEnabled = false;
       stageImg.removeAttribute("src");
       stageImg.hidden = true;
       resultImg.removeAttribute("src");
       resultImg.hidden = true;
       empty.hidden = false;
+      empty.textContent = EMPTY_HINT;
       clearBtn.hidden = true;
       dirty = false;
+      setCropControlsVisible(false);
     }
 
-    panel.querySelector('[data-action="zoom-in"]').addEventListener("click", () => {
+    toggleBtn.addEventListener("click", () => {
+      if (!currentSrc) return;
+      if (cropEnabled) disableCrop();
+      else enableCrop();
+    });
+
+    zoomInBtn.addEventListener("click", () => {
       if (cropper) cropper.zoom(0.1);
     });
-    panel.querySelector('[data-action="zoom-out"]').addEventListener("click", () => {
+    zoomOutBtn.addEventListener("click", () => {
       if (cropper) cropper.zoom(-0.1);
     });
-    panel.querySelector('[data-action="reset"]').addEventListener("click", () => {
+    resetBtn.addEventListener("click", () => {
       if (cropper) {
         cropper.reset();
         schedulePreview();
+        markDirty();
       }
     });
     clearBtn.addEventListener("click", () => {
       input.value = "";
       resetPanel();
       const saved = findSavedImageNear(input);
-      if (saved) startCropper(saved, false);
+      if (saved) setImage(saved, false);
     });
 
     input.addEventListener("change", () => {
@@ -252,7 +322,7 @@
       if (!file) {
         resetPanel();
         const saved = findSavedImageNear(input);
-        if (saved) startCropper(saved, false);
+        if (saved) setImage(saved, false);
         return;
       }
       if (!file.type.startsWith("image/")) {
@@ -262,7 +332,7 @@
         return;
       }
       empty.textContent = EMPTY_HINT;
-      startCropper(URL.createObjectURL(file), true);
+      setImage(URL.createObjectURL(file), true);
     });
 
     const form = input.closest("form");
@@ -307,11 +377,12 @@
 
     panel._cropApi = {
       needsCommit() {
-        return !!(cropper && dirty);
+        // Only replace the uploaded file when crop is explicitly enabled
+        return !!(cropper && cropEnabled && dirty && isLocalFile);
       },
       commit() {
         return new Promise((resolve, reject) => {
-          if (!cropper) {
+          if (!cropper || !cropEnabled) {
             resolve();
             return;
           }
@@ -349,9 +420,8 @@
       },
     };
 
-    // Initial load of existing image into the same crop UI
     const saved = findSavedImageNear(input);
-    if (saved) startCropper(saved, false);
+    if (saved) setImage(saved, false);
 
     return panel;
   }
@@ -370,7 +440,6 @@
 
   function scan(root) {
     const scope = root || document;
-    // Hide separate readonly preview fields — one crop panel is enough
     scope
       .querySelectorAll(".field-photo_preview, .field-image_preview, .field-preview")
       .forEach((el) => {

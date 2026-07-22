@@ -286,6 +286,24 @@ fieldset.module h2,
   background: #eef4f2;
 }
 
+.admin-img-btn--active {
+  background: var(--admin-sage-dark);
+  color: #fff;
+  border-color: transparent;
+}
+
+.admin-crop-panel[data-crop-enabled="0"] .admin-crop-panel__stage {
+  display: grid;
+  place-items: center;
+}
+
+.admin-crop-panel[data-crop-enabled="0"] .admin-crop-panel__img {
+  max-height: 320px;
+  width: auto;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
 .admin-img-btn--close {
   background: #6b7c76;
   margin-inline-start: auto;

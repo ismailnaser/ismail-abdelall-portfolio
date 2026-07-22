@@ -90,7 +90,7 @@ class SiteSettingsAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
             {
                 "description": (
                     "يظهر قبل الهيرو: الصورة، الاسم، والدراسة. "
-                    f"{_AR_EN_HINT} بعد اختيار الصورة حرّك مربع الاقتصاص لتحديد الجزء الظاهر."
+                    f"{_AR_EN_HINT} الاقتصاص اختياري — الصورة بتنحفظ كاملة إلا إذا فعّلت الاقتصاص."
                 ),
                 "fields": (
                     "photo",
@@ -235,7 +235,7 @@ class ProjectAdmin(AutoTranslateAdminMixin, admin.ModelAdmin):
             {
                 "description": (
                     "اكتب العنوان بالعربي واترك الإنجليزي فارغاً ليُترجم عند الحفظ "
-                    "(وإلا املأ الإنجليزي يدوياً). بعد اختيار الصورة حدّد جزء الاقتصاص."
+                    "(وإلا املأ الإنجليزي يدوياً). الاقتصاص اختياري بعد اختيار الصورة."
                 ),
                 "fields": (
                     ("title_ar", "title_en"),
