@@ -24,3 +24,17 @@ dist/
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Local deploy / server / aaPanel helper scripts (never push to GitHub)
+deploy_*
+register_*
+check_*
+probe_*
+fix_*
+generate_deploy_*
+*_Deploy_Report.pdf
+*_Deploy_Guide.pdf
+Contabo_*.pdf
+NotoSansArabic*.ttf
+دليل_*.pdf
+تقرير_*.pdf

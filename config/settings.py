@@ -94,7 +94,7 @@ if DATABASE_URL:
             default=DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
-            ssl_require=True,
+            ssl_require=not DATABASE_URL.startswith("postgresql://") or "127.0.0.1" not in DATABASE_URL and "localhost" not in DATABASE_URL,
         )
     }
 else:
