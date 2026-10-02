@@ -149,12 +149,13 @@ class SiteSettingsAdmin(AdminImageMediaMixin, AutoTranslateAdminMixin, admin.Mod
         (
             "التواصل وروابط التواصل",
             {
-                "description": f"الإيميل والواتساب وGitHub تظهر في قسم التواصل. {_AR_EN_HINT}",
+                "description": f"الإيميل والواتساب وGitHub وLinkedIn تظهر في قسم التواصل. {_AR_EN_HINT}",
                 "fields": (
                     "contact_intro_ar",
                     "contact_intro_en",
                     ("email", "whatsapp"),
                     ("github_username", "github_url"),
+                    "linkedin_url",
                     ("contact_success_ar", "contact_success_en"),
                 ),
             },

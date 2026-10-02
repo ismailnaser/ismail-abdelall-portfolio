@@ -75,6 +75,12 @@ class SiteSettings(models.Model):
     )
     github_username = models.CharField(max_length=80, default="yourusername")
     github_url = models.URLField(default="https://github.com/yourusername")
+    linkedin_url = models.URLField(
+        blank=True,
+        default="https://www.linkedin.com/in/ismail-nsr",
+        verbose_name="LinkedIn",
+        help_text="رابط ملف LinkedIn الكامل",
+    )
 
     hero_btn_projects_en = models.CharField(max_length=60, default="View Projects")
     hero_btn_projects_ar = models.CharField(max_length=60, default="عرض المشاريع")
@@ -166,6 +172,12 @@ class Project(models.Model):
     detail_ar = models.TextField(blank=True, default="")
     stack_en = models.CharField(max_length=300)
     stack_ar = models.CharField(max_length=300)
+    kind_en = models.CharField(max_length=80, blank=True, default="")
+    kind_ar = models.CharField(max_length=80, blank=True, default="")
+    period_en = models.CharField(max_length=80, blank=True, default="")
+    period_ar = models.CharField(max_length=80, blank=True, default="")
+    role_en = models.CharField(max_length=120, blank=True, default="")
+    role_ar = models.CharField(max_length=120, blank=True, default="")
     live_url = models.URLField(blank=True, max_length=500)
     github_url = models.URLField(blank=True, max_length=500)
     image = models.ImageField(upload_to="projects/", blank=True, null=True, max_length=500)
@@ -223,6 +235,12 @@ class Service(models.Model):
     title_ar = models.CharField(max_length=120)
     desc_en = models.TextField()
     desc_ar = models.TextField()
+    period_en = models.CharField(max_length=80, blank=True, default="")
+    period_ar = models.CharField(max_length=80, blank=True, default="")
+    role_en = models.CharField(max_length=120, blank=True, default="")
+    role_ar = models.CharField(max_length=120, blank=True, default="")
+    tags_en = models.CharField(max_length=300, blank=True, default="")
+    tags_ar = models.CharField(max_length=300, blank=True, default="")
     order = models.PositiveIntegerField(default=0)
     is_visible = models.BooleanField(default=True)
 
@@ -237,6 +255,7 @@ class Service(models.Model):
 
 class Skill(models.Model):
     name = models.CharField(max_length=80)
+    category = models.CharField(max_length=80, blank=True, default="")
     order = models.PositiveIntegerField(default=0)
     is_visible = models.BooleanField(default=True)
 
