@@ -55,8 +55,10 @@ class AdminImageMediaMixin:
     """Optional crop UI on default Django admin."""
 
     class Media:
-        css = {"all": ("css/admin-image.css?v=2",)}
-        js = ("js/admin-image-preview.js?v=2",)
+        # Leading slash skips Django's static() encoder, which turns "?" into "%3F"
+        # and makes the browser request a file that does not exist.
+        css = {"all": ("/static/css/admin-image.css?v=3",)}
+        js = ("/static/js/admin-image-preview.js?v=3",)
 
 
 def _save_with_cloudinary_guard(admin_obj, request, obj, form, change):
