@@ -386,7 +386,8 @@
 
     panel._cropApi = {
       needsCommit() {
-        return !!(cropper && cropEnabled && dirty && isLocalFile);
+        // Crop applies to a newly chosen file and to the photo already saved.
+        return !!(cropper && cropEnabled);
       },
       commit() {
         return new Promise((resolve, reject) => {

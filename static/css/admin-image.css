@@ -42,9 +42,14 @@
   max-width: 100%;
 }
 
+.admin-crop-panel [hidden] {
+  display: none !important;
+}
+
 .admin-crop-panel__empty {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: grid;
   place-items: center;
   padding: 1.25rem;
@@ -52,6 +57,10 @@
   color: #d6d3d1;
   font-size: 0.9rem;
   line-height: 1.6;
+}
+
+.admin-crop-panel .cropper-container {
+  z-index: 1;
 }
 
 .admin-crop-panel__result {

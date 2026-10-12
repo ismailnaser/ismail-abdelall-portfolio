@@ -55,8 +55,8 @@ class AdminImageMediaMixin:
     """Optional crop UI on default Django admin."""
 
     class Media:
-        css = {"all": ("css/admin-image.css",)}
-        js = ("js/admin-image-preview.js",)
+        css = {"all": ("css/admin-image.css?v=2",)}
+        js = ("js/admin-image-preview.js?v=2",)
 
 
 def _save_with_cloudinary_guard(admin_obj, request, obj, form, change):
